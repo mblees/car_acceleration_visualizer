@@ -2,23 +2,22 @@
 #include <LIS3DH.h>
 #include <Wire.h>
 
-struct Vector
-{
-  float x;
-  float y;
-  float z;
-};
+#include "vectorTransform.h"
+#include "vector.h"
+
+#define LED_MATRIX_ROWS 3
+#define LED_MATRIX_COLUMNS 3
 
 Vector calibrateSensor(uint16_t cycles);
 Vector readSensorDataCalibrated(Vector calibration);
 
 LIS3DH lis3dh;
 static Vector calibration;
+static bool ledMatrix[LED_MATRIX_ROWS][LED_MATRIX_COLUMNS];
 
 void setup()
 {
   Serial.begin(9600);
-  // Wait briefly for serial monitor to attach on some boards
   while (!Serial)
     ;
   delay(200);
@@ -45,9 +44,9 @@ void loop()
   Serial.print(" Y: ");
   Serial.print(calibratedAcc.y);
   Serial.print(" Z: ");
-  Serial.print(calibratedAcc.z);
+  Serial.println(calibratedAcc.z);
 
-  delay(250);
+  delay(50);
 }
 
 Vector calibrateSensor(uint16_t cycles)
@@ -75,9 +74,8 @@ Vector calibrateSensor(uint16_t cycles)
 
 Vector readSensorDataCalibrated(Vector calibration)
 {
-  float x, y, z;
-  lis3dh.readAcceleration(x, y, z);
+  Vector data;
+  lis3dh.readAcceleration(data.x, data.y, data.z);
 
-  Vector result;
-  return result;
+  return getTransformedVector(calibration, data);
 }
