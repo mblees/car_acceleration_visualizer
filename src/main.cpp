@@ -1,20 +1,26 @@
 #include <Arduino.h>
 #include <LIS3DH.h>
 #include <Wire.h>
+#include <Adafruit_NeoPixel.h>
 
 #include "vectorTransform.h"
 #include "vector.h"
 
-#define LED_MATRIX_Size 7
+#define LED_MATRIX_Size 5
+#define LED_PIN 26
+#define LIS3DH_EN 25
+#define LIS3DH_I2C_EN 33
 
 Vector calibrateSensor(uint16_t cycles);
 Vector readSensorDataCalibrated(Vector calibration);
 static float mapAxisQuadratic(float v);
 void setMatrixByAcceleration(Vector acc);
+void setLEDMatrix(void);
 
 LIS3DH lis3dh;
 static Vector calibration;
 static bool ledMatrix[LED_MATRIX_Size][LED_MATRIX_Size] = {0};
+Adafruit_NeoPixel leds(LED_MATRIX_Size *LED_MATRIX_Size, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup()
 {
@@ -24,8 +30,16 @@ void setup()
   delay(200);
   Serial.println("Serial connected!");
 
-  pinMode(25, OUTPUT);
-  digitalWrite(25, HIGH);
+  leds.begin();
+  leds.setBrightness(50);
+  leds.setPixelColor(0, 255, 0, 0);
+  leds.show();
+
+  pinMode(LIS3DH_EN, OUTPUT);
+  digitalWrite(LIS3DH_EN, HIGH);
+  pinMode(LIS3DH_I2C_EN, OUTPUT);
+  digitalWrite(LIS3DH_I2C_EN, LOW);
+
   Wire.begin(21, 22);
 
   delay(200);
@@ -42,35 +56,7 @@ void loop()
 {
   Vector calibratedAcc = readSensorDataCalibrated(calibration);
   setMatrixByAcceleration(calibratedAcc);
-
-  for (int y = 0; y < LED_MATRIX_Size; y++)
-  {
-    for (int x = 0; x < LED_MATRIX_Size; x++)
-    {
-      if (ledMatrix[y][x])
-      {
-        Serial.print("■ "); // true = black square
-      }
-      else
-      {
-        Serial.print("□ "); // false = white square
-      }
-    }
-    Serial.println();
-  }
-
-  Serial.print("X: ");
-  Serial.print(calibratedAcc.x, 3);
-
-  Serial.print(" | Y: ");
-  Serial.print(calibratedAcc.y, 3);
-
-  Serial.print(" | Z: ");
-  Serial.println(calibratedAcc.z, 3);
-
-  Serial.println();
-
-  delay(300);
+  setLEDMatrix();
 }
 
 Vector calibrateSensor(uint16_t cycles)
@@ -144,4 +130,23 @@ void setMatrixByAcceleration(Vector acc)
     ledY = size - 1;
 
   ledMatrix[ledY][ledX] = true;
+}
+
+void setLEDMatrix(void)
+{
+  for (uint8_t i = 0; i < LED_MATRIX_Size; i++)
+  {
+    for (uint8_t j = 0; j < LED_MATRIX_Size; j++)
+    {
+      if (ledMatrix[i][j])
+      {
+        leds.setPixelColor(5 * i + j, 0, 255, 0);
+      }
+      else
+      {
+        leds.setPixelColor(5 * i + j, 0, 0, 0);
+      }
+    }
+  }
+  leds.show();
 }
